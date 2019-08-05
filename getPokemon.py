@@ -14,44 +14,69 @@ Bings Image Search API and storing such images in folder
 '''
 
 '''
+Gets an API key from .env file
+'''
+def getAPIKey():
+    env_path = Path('.') / 'key.env'
+    load_dotenv(dotenv_path=env_path)
+    return os.getenv("KEY")
+
+'''
+Get a correctly formatted url
+'''
+def getURL(img):
+    return "{}".format(img.content_url)
+
+'''
 Store an image given path, filename, and 
 the downloaded image
 '''
 def storeImage(path, filename, imageData):
     try:
         with open(path + filename, 'wb') as handler:
-            handler.write(img_data)
+            handler.write(imageData)
             print("Saved", filename, "to", path, "\n")
     except:
         print("Failed to save or open")
-    
-#Get API key
-env_path = Path('.') / 'key.env'
-load_dotenv(dotenv_path=env_path)
-key = os.getenv("KEY")
 
+'''
+Takes image results and saves each image 
+to a file
+'''
+def getAllImages(offset, search_term):
+    image_results = client.images.search(query=search_term, count=50, offset=offset)
+    return image_results
+
+'''
+Get an entire image batch and save
+each image in the correct folder
+'''
+def getImage(url):
+    try:
+        print("Getting image:", url)
+        img_data = requests.get(url).content
+        return img_data
+    except:
+        print("Error getting image:", url) 
+
+key = getAPIKey()
+
+BATCH_SIZE = 50
+img_count = int(input("Enter how many images you need: "))
 search_term = input("Enter the query: ")
 path = "./" + search_term + "/"
 os.makedirs(path, exist_ok=True)
 
-subscription_key = key
+client = ImageSearchAPI(CognitiveServicesCredentials(key))
 
-client = ImageSearchAPI(CognitiveServicesCredentials(subscription_key))
-
-image_results = client.images.search(query=search_term, count=50)
-
-print("Total number of images returned: {}".format(len(image_results.value)))
-fileNum = 0
-if image_results.value:
-    for image in image_results.value:
-        url = "{}".format(image.content_url)
-        print("Getting", url)
-        try:
-            img_data = requests.get(url).content
-            filename = search_term + "_" + str(fileNum)
-            storeImage(path, filename, img_data)
-            fileNum += 1
-        except:
-            print("Error getting url") 
-else:
-    print("No image results returned!")
+for batch in range(0, img_count, BATCH_SIZE):
+    image_results = getAllImages(batch, search_term) 
+    if image_results.value:
+        imageNum = 0
+        for imageCount in range(len(image_results.value)):
+            url = getURL(image_results.value[imageCount])
+            img_data = getImage(url)
+            if img_data:
+                filename = search_term + "_" + str(imageNum + batch)
+                storeImage(path, filename, img_data)
+                imageNum += 1
