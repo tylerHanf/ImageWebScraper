@@ -54,7 +54,7 @@ each image in the correct folder
 def getImage(url):
     try:
         print("Getting image:", url)
-        img_data = requests.get(url).content
+        img_data = requests.get(url, timeout=(5, 14)).content
         return img_data
     except:
         print("Error getting image:", url) 
