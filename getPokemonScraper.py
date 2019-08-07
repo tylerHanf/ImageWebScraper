@@ -15,9 +15,8 @@ Bings Image Search API and storing such images in folder
 It gets images based on the individual batch size.
 Because this is suited for gathering data for machine
 learning, the default batch size is 50 (the max number of
-images that can be pulled at a time with the API). So
-when gathering a specific number of images, please request
-amounts by factors of 50 or change batch size as appropriate.
+images that can be pulled at a time with the API) and the
+default number of images to scrape is 1000. 
 -------------------------------------------------------
 '''
 
@@ -110,6 +109,7 @@ Calculates the total run time
 '''
 def calcTotalTime(startTime):
     return time.time() - startTime
+
 '''
 Prints the total runtime based
 on the current time minus start time
@@ -126,7 +126,7 @@ def printTotalTime(startTime):
 KEY = getAPIKey()
 ENCODE_FORMAT = "png"
 BATCH_SIZE = 50
-TOTAL_IMG_COUNT = 10
+TOTAL_IMG_COUNT = 1000
 
 '''
 Main function to scrape and save data
