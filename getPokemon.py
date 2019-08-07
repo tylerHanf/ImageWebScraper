@@ -32,7 +32,7 @@ def getAPIKey():
 '''
 Checks the encoding format of an image
 '''
-def checkEncodingFormat(encodeFormat, image):
+def checkEncoding(encodeFormat, image):
     if image.encoding_format == 'png':
         return True
     return False
@@ -59,9 +59,10 @@ def storeImage(path, filename, imageData):
 Takes image results and saves each image 
 to a file
 '''
-def getAllImages(offset, search_term):
-    image_results = client.images.search(query=search_term, count=50, offset=offset)
-    return image_results
+def getAllImages(offset, searchTerm, client):
+    global BATCH_SIZE
+    imageResults = client.images.search(query=searchTerm, count=BATCH_SIZE, offset=offset)
+    return imageResults
 
 '''
 Get an entire image batch and save
@@ -70,10 +71,39 @@ each image in the correct folder
 def getImage(img):
     try:
         print("Getting image:", img)
-        img_data = requests.get(img, timeout=(5, 14)).content
-        return img_data
+        imgData = requests.get(img, timeout=(5, 14)).content
+        return imgData
     except:
         print("Error getting image:", img, "\n") 
+
+'''
+Check to see if number of downloaded
+images is equal to the total image count
+'''
+def checkForFinish(currentImgCount):
+    global TOTAL_IMG_COUNT
+    if currentImgCount == TOTAL_IMG_COUNT:
+        return True
+    return False
+
+'''
+Gets and stores an entire batch of images
+Returns currentImgCount to update the currentImgCount
+'''
+def storeOneBatch(imageResults, currentImgCount, searchTerm, path):
+    global ENCODE_FORMAT
+    global TOTAL_IMG_COUNT
+    for imageCount in range(len(imageResults.value)):
+        if checkForFinish(currentImgCount):
+            break
+        if checkEncoding(ENCODE_FORMAT, imageResults.value[imageCount]):
+            url = getURL(imageResults.value[imageCount])
+            imgData = getImage(url)
+            if imgData:
+                filename = searchTerm + "_" + str(currentImgCount)
+                storeImage(path, filename, imgData)
+                currentImgCount += 1
+    return currentImgCount
 
 '''
 Calculates the total run time
@@ -92,39 +122,40 @@ def printTotalTime(startTime):
         return str(seconds) + "s"
     return str(minutes) + "m " + str(seconds) + "s" 
 
+#Declare global variables
 KEY = getAPIKey()
 ENCODE_FORMAT = "png"
 BATCH_SIZE = 50
-
-img_count = int(input("Enter how many images you need: "))
-search_term = input("Enter the query: ")
-path = "./" + search_term + "/"
-
-os.makedirs(path, exist_ok=True)
-
-client = ImageSearchAPI(CognitiveServicesCredentials(KEY))
-
-currentImgCount = 0
-offset = 0
-timerStart = time.time()
+TOTAL_IMG_COUNT = 10
 
 '''
-Gets the correct number of images with specific
-file encoding 
+Main function to scrape and save data
 '''
-while currentImgCount < img_count:
-    image_results = getAllImages(offset, search_term) 
-    if image_results.value:
-        for imageCount in range(len(image_results.value)):
-            if checkEncodingFormat(ENCODE_FORMAT, image_results.value[imageCount]):
-                url = getURL(image_results.value[imageCount])
-                img_data = getImage(url)
-                if img_data:
-                    filename = search_term + "_" + str(currentImgCount)
-                    storeImage(path, filename, img_data)
-                    currentImgCount += 1
-    #The offset is how many images in should the search start with
-    offset += BATCH_SIZE
+def main():
+    global KEY
+    global BATCH_SIZE
+    global TOTAL_IMG_COUNT
 
-print("Scraped", currentImgCount, "images of", search_term)
-print("Total scrape time:", printTotalTime(timerStart))
+    searchTerm = input("Enter the query: ")
+    path = "./" + searchTerm + "/"
+
+    os.makedirs(path, exist_ok=True)
+
+    client = ImageSearchAPI(CognitiveServicesCredentials(KEY))
+
+    currentImgCount = 0
+    offset = 0
+    timerStart = time.time()
+
+    while currentImgCount < TOTAL_IMG_COUNT:
+        imageResults = getAllImages(offset, searchTerm, client) 
+        if imageResults.value:
+            currentImgCount = storeOneBatch(imageResults, currentImgCount, searchTerm, path)
+        #The offset is how many images in should the search start with
+        offset += BATCH_SIZE
+
+    print("Scraped", currentImgCount, "images of", searchTerm)
+    print("Total scrape time:", printTotalTime(timerStart))
+
+if __name__ == "__main__":
+    main()
