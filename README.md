@@ -1,2 +1,2 @@
-# PokemonIdentifier
-Make a CNN that identifies different pokemon based on an image
+# ImageWebScraper
+Scrapes images from given search term using the Bing Image Search API
